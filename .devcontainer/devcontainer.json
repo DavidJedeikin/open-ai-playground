@@ -13,6 +13,8 @@
                 "editor.tabSize": 4,
                 "editor.formatOnSave": true,
                 "terminal.integrated.env.linux": {
+                    "defaultProfile": "base",
+                    "TERM": "xterm-256color",
                     "VIRTUAL_ENV": "${workspaceFolder}/.venv",
                     "PATH": "${workspaceFolder}/.venv/bin:${env:PATH}",
                     "PYTHONPATH": "${workspaceFolder}"

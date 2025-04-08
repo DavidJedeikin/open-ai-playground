@@ -1,10 +1,9 @@
 from openai import OpenAI
 
-from api_key import API_KEY
+client = OpenAI()
 
-client = OpenAI(api_key=API_KEY)
+PROMPT = "Write haiku about king david"
 
-PROMPT = "Write a one-sentence bedtime story about a unicorn."
 response = client.responses.create(model="gpt-4o-mini", input=PROMPT)
 
 print(response.output_text)

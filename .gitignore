@@ -17,4 +17,5 @@ __pycache__/
 # Ignore environment configuration files
 .env
 
-.genisis-venv/
+# Ignore API keys 
+open-api-key.sh

@@ -1,4 +1,3 @@
-#!/bin/bash 
 
 # Bashrc support 
 export LS_OPTIONS='--color=auto'

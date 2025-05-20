@@ -1,66 +1,60 @@
 from openai import OpenAI
 import json
-
-import requests
-
-
-def get_weather(latitude, longitude):
-    response = requests.get(
-        f"https://api.open-meteo.com/v1/forecast?latitude={latitude}&longitude={longitude}&current=temperature_2m,wind_speed_10m&hourly=temperature_2m,relative_humidity_2m,wind_speed_10m"
-    )
-    data = response.json()
-    return data["current"]["temperature_2m"]
+from tools import tool_descriptions, get_weather, get_activity
 
 
-client = OpenAI()
-
-tools = [
-    {
-        "type": "function",
-        "name": "get_weather",
-        "description": "Get current temperature for provided coordinates in celsius.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "latitude": {"type": "number"},
-                "longitude": {"type": "number"},
-            },
-            "required": ["latitude", "longitude"],
-            "additionalProperties": False,
-        },
-        "strict": True,
-    }
-]
-
-input_messages = [
-    {"role": "user", "content": "What's the weather like in Paris today?"}
-]
-
-response = client.responses.create(
-    model="gpt-4.1",
-    input=input_messages,
-    tools=tools,
-)
+def call_function(name, args):
+    if name == "get_weather":
+        return get_weather(**args)
+    if name == "get_activity":
+        return get_activity(**args)
 
 
-tool_call = response.output[0]
-args = json.loads(tool_call.arguments)
+def use_tools(tool_calls, input_msgs):
+    for tool_call in tool_calls:
+        # Use the tool
+        if tool_call.type != "function_call":
+            print(f"{tool_call.name} is not a function call")
+            continue
+        name = tool_call.name
+        args = json.loads(tool_call.arguments)
+        print(f"Request to use tool: {name}, with: {args}")
+        result = call_function(name, args)
 
-result = get_weather(args["latitude"], args["longitude"])
+        # Update the input messages for the future call
+        input_msgs.append(tool_call)
+        input_msgs.append(
+            {
+                "type": "function_call_output",
+                "call_id": tool_call.call_id,
+                "output": str(result),
+            }
+        )
 
 
-input_messages.append(tool_call)  # append model's function call message
-input_messages.append(
-    {  # append result message
-        "type": "function_call_output",
-        "call_id": tool_call.call_id,
-        "output": str(result),
-    }
-)
+def get_recommendation(city) -> str:
+    client = OpenAI()
+    input_msgs = [
+        {"role": "developer", "content": "You are a concise travel advisor"},
+        {"role": "user", "content": f"What should I do in {city} today?"},
+    ]
 
-response_2 = client.responses.create(
-    model="gpt-4.1",
-    input=input_messages,
-    tools=tools,
-)
-print(response_2.output_text)
+    while True:
+        response = client.responses.create(
+            model="gpt-4.1",
+            input=input_msgs,
+            tools=tool_descriptions,
+        )
+        if response.output[0].type == "function_call":
+            use_tools(response.output, input_msgs)
+
+        elif response.output[0].type != "output_text":
+            return response.output_text
+
+        else:
+            print(f"Received an unhandled reponse: \n{response}")
+            sys.exit(1)
+
+
+if __name__ == "__main__":
+    print(get_recommendation("Cape Town"))
